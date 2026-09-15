@@ -1,0 +1,9 @@
+pandas
+numpy
+openpyxl
+lxml
+beautifulsoup4
+scikit-learn
+matplotlib
+zeep
+pytest
