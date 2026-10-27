@@ -15,10 +15,24 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Type check (mypy)
+        run: mypy app main.py
       - name: Generate sample data
         run: python scripts/generate_sample_data.py
-      - name: Run tests
-        run: python -m pytest -q
-      - name: Run reconciliation CLI
-        run: python main.py
+      - name: Run tests (excludes Oracle-only tests; no Oracle instance in CI)
+        run: python -m pytest -m "not oracle" -q
+      - name: Run demo reconciliation CLI
+        run: python main.py demo
+      - name: Run generic reconciliation CLI against the demo data (SQLite backend)
+        run: |
+          python main.py run \
+            --source data/sample/erp_orders.json \
+            --target data/sample/finance_orders.csv \
+            --source-name erp --target-name finance \
+            --key order_id \
+            --compare amount:numeric:0.01 --compare status --compare date:date \
+            --db-backend sqlite --sqlite-path ci_recon.db \
+            --out-dir output

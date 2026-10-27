@@ -101,7 +101,10 @@ def main():
     write_xml(perturb(base, "warehouse", drop_rate=0.05, status_flip_rate=0.08), out / "warehouse_orders.xml")
     write_csv(perturb(base, "finance", amount_noise_rate=0.10), out / "finance_orders.csv")
     write_xlsx(perturb(base, "billing", drop_rate=0.03, amount_noise_rate=0.05), out / "billing_orders.xlsx")
-    write_html(perturb(base, "legacy_portal", drop_rate=0.07, status_flip_rate=0.05), out / "legacy_report.html")
+    write_html(
+        perturb(base, "legacy_portal", drop_rate=0.07, status_flip_rate=0.05),
+        out / "legacy_report.html",
+    )
 
     print(f"Generated {args.count} base orders across 5 sources in {out}/")
 
