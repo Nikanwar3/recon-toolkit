@@ -1,7 +1,10 @@
 """Core reconciliation engine: merge order records from N sources keyed by
 order_id, and surface where sources disagree or a record is missing entirely.
 """
+import logging
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
 
 COMPARE_FIELDS = ["customer", "amount", "status", "date"]
 AMOUNT_TOLERANCE = 0.01
@@ -14,11 +17,26 @@ def merge_by_order_id(sources):
     record contents -- a source that returns zero records must still count
     as a known source, otherwise a fully-failed export would be silently
     invisible to "missing_from" detection (the worst-case reconciliation miss).
+
+    A source with two records sharing the same order_id keeps only the
+    first one seen and logs a warning -- it used to silently keep whichever
+    record happened to be assigned last, which meant a duplicate upstream
+    export could quietly hide a real record behind a stray one. See
+    docs/root-cause-analysis.md for the scenario this guards against.
     """
     merged = defaultdict(dict)
     for source_name, records in sources.items():
+        seen_order_ids = set()
         for rec in records:
-            merged[rec["order_id"]][source_name] = rec
+            order_id = rec["order_id"]
+            if order_id in seen_order_ids:
+                logger.warning(
+                    "duplicate order_id %r in source %r; keeping first occurrence",
+                    order_id, source_name,
+                )
+                continue
+            seen_order_ids.add(order_id)
+            merged[order_id][source_name] = rec
     return merged, sorted(sources.keys())
 
 

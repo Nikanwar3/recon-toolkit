@@ -48,3 +48,19 @@ def test_status_mismatch_is_flagged():
     b = [rec("ORD-1", "sys_b", status="CANCELLED")]
     discrepancies = reconcile({"sys_a": a, "sys_b": b})
     assert "status" in discrepancies[0]["field_mismatches"]
+
+
+def test_duplicate_order_id_within_one_source_keeps_first_record():
+    """Regression test for the bug documented in docs/root-cause-analysis.md
+    (scenario 1): a source emitting two records under the same order_id used
+    to silently let the later one overwrite the earlier one. It must now
+    deterministically keep the first-seen record instead."""
+    a = [
+        rec("ORD-1", "sys_a", amount=100.00),
+        rec("ORD-1", "sys_a", amount=999.00),  # duplicate order_id, same source
+    ]
+    b = [rec("ORD-1", "sys_b", amount=100.00)]
+
+    discrepancies = reconcile({"sys_a": a, "sys_b": b})
+
+    assert discrepancies == []  # first sys_a record (100.00) matches sys_b
