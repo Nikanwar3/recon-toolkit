@@ -1,8 +1,13 @@
-"""Render reconciliation results as a chart + text summary."""
+"""Render reconciliation results as a chart + text summary, and (for the
+generic two-dataset engine) as machine-readable JSON/CSV job reports."""
+import csv
+import json
 from collections import Counter
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import matplotlib
+
 matplotlib.use("Agg")  # headless-safe: no display backend required
 import matplotlib.pyplot as plt
 
@@ -67,3 +72,65 @@ def write_report(discrepancies, out_dir="."):
     summary = render_summary(discrepancies)
     (out_dir / "reconciliation_summary.txt").write_text(summary)
     return chart_path, summary
+
+
+def build_job_report(
+    job_id: str,
+    status: str,
+    source_name: str,
+    target_name: str,
+    source_count: int,
+    target_count: int,
+    matched_count: int,
+    source_only_count: int,
+    target_only_count: int,
+    invalid_count: int,
+    duration_seconds: float,
+    field_mismatches: List[Dict[str, Any]],
+    error_summary: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Assemble the machine-readable report dict for one generic
+    (source, target) reconciliation job. `field_mismatches` is a flat list
+    of {"business_key", "field", "source_value", "target_value"} dicts --
+    decoupled from both the engine's dataclasses and the DB layer's row
+    type, so this function has no dependency on either.
+    """
+    return {
+        "job_id": job_id,
+        "status": status,
+        "source_name": source_name,
+        "target_name": target_name,
+        "source_count": source_count,
+        "target_count": target_count,
+        "matched_count": matched_count,
+        "mismatched_count": len({m["business_key"] for m in field_mismatches}),
+        "source_only_count": source_only_count,
+        "target_only_count": target_only_count,
+        "invalid_count": invalid_count,
+        "duration_seconds": duration_seconds,
+        "field_mismatches": field_mismatches,
+        "error_summary": error_summary,
+    }
+
+
+def write_json_report(report: Dict[str, Any], out_dir=".") -> Path:
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{report['job_id']}_report.json"
+    path.write_text(json.dumps(report, indent=2, default=str))
+    return path
+
+
+def write_csv_report(report: Dict[str, Any], out_dir=".") -> Path:
+    """Writes the field-level mismatches as CSV (the part of the report
+    that is naturally tabular); job-level counts stay in the JSON report."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{report['job_id']}_mismatches.csv"
+    fieldnames = ["business_key", "field", "source_value", "target_value"]
+    with path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in report["field_mismatches"]:
+            writer.writerow({k: row.get(k) for k in fieldnames})
+    return path
