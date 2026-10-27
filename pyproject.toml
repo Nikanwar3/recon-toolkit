@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+exclude = [".venv", "data", "output"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+exclude = ["^\\.venv/", "^data/", "^output/"]
+
+[tool.pytest.ini_options]
+markers = [
+    "oracle: requires a live Oracle Database instance (ORACLE_DSN/ORACLE_USER/ORACLE_PASSWORD); excluded by default, see docs/oracle-setup.md",
+]

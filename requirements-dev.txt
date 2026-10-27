@@ -1,0 +1,4 @@
+# Dev-only tooling: linting and type checking. Not required to run the app.
+ruff
+mypy
+pandas-stubs

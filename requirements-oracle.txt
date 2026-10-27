@@ -1,0 +1,4 @@
+# Optional: only needed to run the Oracle Database backend
+# (`main.py run --db-backend oracle`). Not required for the SQLite backend,
+# the 5-source demo, or the core test suite.
+oracledb

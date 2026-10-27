@@ -2,5 +2,10 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 output/
 data/sample/
+*.db
+.env
+wallet/
